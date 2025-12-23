@@ -1,0 +1,29 @@
+#!/bin/bash
+# Check if USB Debug Tool is running
+
+PID_FILE="/tmp/usb_debug_tool.pid"
+PORT="${USB_DEBUG_PORT:-8080}"
+
+# Check PID file
+if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE")
+    if kill -0 "$PID" 2>/dev/null; then
+        # Also check HTTP endpoint
+        if curl -s "http://localhost:$PORT/api/health" > /dev/null 2>&1; then
+            echo "USB Debug Tool is running (PID: $PID, Port: $PORT)"
+            exit 0
+        else
+            echo "Process running but HTTP not responding (PID: $PID)"
+            exit 1
+        fi
+    fi
+fi
+
+# Check by process name
+if pgrep -f "usb_debug_tool.main" > /dev/null; then
+    echo "USB Debug Tool is running (found by process name)"
+    exit 0
+fi
+
+echo "USB Debug Tool is not running"
+exit 1

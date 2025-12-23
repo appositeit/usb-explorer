@@ -1,0 +1,578 @@
+/* USB Debug Tool - Styles */
+
+:root {
+    /* Light mode colors */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f3f4f6;
+    --bg-tertiary: #e5e7eb;
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --text-muted: #9ca3af;
+    --border-color: #d1d5db;
+    --accent-color: #3b82f6;
+    --success-color: #22c55e;
+    --warning-color: #f59e0b;
+    --error-color: #ef4444;
+
+    /* Device type colors */
+    --hub-color: #3b82f6;
+    --input-color: #22c55e;
+    --storage-color: #f97316;
+    --audio-color: #a855f7;
+    --video-color: #ec4899;
+    --comm-color: #06b6d4;
+    --unknown-color: #6b7280;
+
+    /* Sizing */
+    --header-height: 60px;
+    --panel-gap: 12px;
+    --border-radius: 8px;
+}
+
+/* Dark mode */
+.dark-mode {
+    --bg-primary: #1f2937;
+    --bg-secondary: #111827;
+    --bg-tertiary: #374151;
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --text-muted: #6b7280;
+    --border-color: #4b5563;
+}
+
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+header {
+    height: var(--header-height);
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+header h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+header h1 svg {
+    width: 24px;
+    height: 24px;
+    color: var(--accent-color);
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Buttons */
+button {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+button:hover {
+    background-color: var(--border-color);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+button svg {
+    width: 16px;
+    height: 16px;
+}
+
+button.primary {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
+button.primary:hover {
+    filter: brightness(1.1);
+}
+
+/* Connection status */
+#connection-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.875rem;
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+
+#connection-status svg {
+    width: 16px;
+    height: 16px;
+}
+
+.status-connected {
+    background-color: rgba(34, 197, 94, 0.2);
+    color: var(--success-color);
+}
+
+.status-disconnected {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: var(--error-color);
+}
+
+/* Main layout */
+main {
+    flex: 1;
+    padding: var(--panel-gap);
+    display: flex;
+    flex-direction: column;
+    gap: var(--panel-gap);
+    overflow: hidden;
+}
+
+.container {
+    flex: 1;
+    display: flex;
+    gap: var(--panel-gap);
+    min-height: 0;
+}
+
+/* Panels */
+.panel {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--bg-tertiary);
+}
+
+.panel-header h2 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+}
+
+.panel-header h2 svg {
+    width: 16px;
+    height: 16px;
+}
+
+.panel-header button {
+    padding: 4px 8px;
+    background: transparent;
+    border: none;
+}
+
+/* Tree panel */
+#tree-panel {
+    flex: 2;
+    min-width: 400px;
+}
+
+#tree-container {
+    flex: 1;
+    overflow: auto;
+    padding: 16px;
+}
+
+#tree-svg {
+    width: 100%;
+    min-height: 400px;
+}
+
+/* Info panel */
+#info-panel {
+    flex: 1;
+    min-width: 300px;
+    max-width: 400px;
+}
+
+#info-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+#info-content .placeholder {
+    color: var(--text-muted);
+    text-align: center;
+    padding: 40px 20px;
+}
+
+/* Device info styles */
+.device-info {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.device-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.device-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.device-icon svg {
+    width: 24px;
+    height: 24px;
+    color: white;
+}
+
+.device-title h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.device-title .subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.info-section {
+    border-top: 1px solid var(--border-color);
+    padding-top: 12px;
+}
+
+.info-section h4 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.info-item .label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.info-item .value {
+    font-size: 0.875rem;
+    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+}
+
+.device-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.device-actions button {
+    flex: 1;
+    justify-content: center;
+}
+
+/* Errors section */
+.errors-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.error-item {
+    padding: 8px 12px;
+    background-color: rgba(239, 68, 68, 0.1);
+    border-left: 3px solid var(--error-color);
+    border-radius: 4px;
+    font-size: 0.875rem;
+    color: var(--error-color);
+}
+
+.error-item.warning {
+    background-color: rgba(245, 158, 11, 0.1);
+    border-color: var(--warning-color);
+    color: var(--warning-color);
+}
+
+/* Log panel */
+#log-panel {
+    height: 200px;
+    min-height: 150px;
+    resize: vertical;
+    overflow: hidden;
+}
+
+#log-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+    font-size: 0.8125rem;
+}
+
+.log-placeholder {
+    color: var(--text-muted);
+    padding: 16px;
+    text-align: center;
+}
+
+.log-entry {
+    padding: 6px 12px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.log-entry .time {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.log-entry .icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.log-entry.add {
+    background-color: rgba(34, 197, 94, 0.15);
+}
+
+.log-entry.add .icon {
+    color: var(--success-color);
+}
+
+.log-entry.remove {
+    background-color: rgba(239, 68, 68, 0.15);
+}
+
+.log-entry.remove .icon {
+    color: var(--error-color);
+}
+
+.log-entry.error {
+    background-color: rgba(245, 158, 11, 0.15);
+}
+
+.log-entry.error .icon {
+    color: var(--warning-color);
+}
+
+/* Tree node styles */
+.node {
+    cursor: pointer;
+}
+
+.node circle {
+    stroke-width: 2px;
+    transition: all 0.2s ease;
+}
+
+.node:hover circle {
+    stroke-width: 3px;
+    filter: brightness(1.2);
+}
+
+.node.selected circle {
+    stroke-width: 4px;
+}
+
+.node.has-error circle {
+    stroke: var(--error-color);
+    stroke-dasharray: 4 2;
+}
+
+.node.adding circle {
+    animation: pulse 0.5s ease-out;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.5);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.node.removing {
+    opacity: 0.4;
+}
+
+.node text {
+    font-size: 11px;
+    fill: var(--text-primary);
+}
+
+.link {
+    fill: none;
+    stroke: var(--border-color);
+    stroke-width: 1.5px;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 24px;
+    min-width: 300px;
+    max-width: 90vw;
+}
+
+.modal-content h3 {
+    margin-bottom: 12px;
+}
+
+.modal-content p {
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    font-size: 0.875rem;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin-bottom: 16px;
+}
+
+.modal-content input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* Device type badge colors */
+.device-type-hub { background-color: var(--hub-color); }
+.device-type-hid_keyboard,
+.device-type-hid_mouse,
+.device-type-hid_other { background-color: var(--input-color); }
+.device-type-storage { background-color: var(--storage-color); }
+.device-type-audio { background-color: var(--audio-color); }
+.device-type-video { background-color: var(--video-color); }
+.device-type-comm { background-color: var(--comm-color); }
+.device-type-unknown { background-color: var(--unknown-color); }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+
+    #info-panel {
+        max-width: none;
+        max-height: 300px;
+    }
+
+    #tree-panel {
+        min-width: 0;
+    }
+}

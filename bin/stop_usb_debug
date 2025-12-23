@@ -1,0 +1,47 @@
+#!/bin/bash
+# Stop USB Debug Tool server
+
+PID_FILE="/tmp/usb_debug_tool.pid"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Try graceful shutdown via API first
+PORT="${USB_DEBUG_PORT:-8080}"
+
+echo "Stopping USB Debug Tool..."
+
+# Try API shutdown
+if curl -s -X POST "http://localhost:$PORT/api/shutdown" > /dev/null 2>&1; then
+    echo "Shutdown request sent"
+    sleep 2
+fi
+
+# Check PID file
+if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE")
+
+    if kill -0 "$PID" 2>/dev/null; then
+        echo "Stopping process $PID..."
+        kill "$PID" 2>/dev/null
+
+        # Wait up to 5 seconds
+        for i in {1..10}; do
+            if ! kill -0 "$PID" 2>/dev/null; then
+                break
+            fi
+            sleep 0.5
+        done
+
+        # Force kill if still running
+        if kill -0 "$PID" 2>/dev/null; then
+            echo "Force killing process $PID..."
+            kill -9 "$PID" 2>/dev/null
+        fi
+    fi
+
+    rm -f "$PID_FILE"
+    echo "USB Debug Tool stopped"
+else
+    # Try to find and kill by process name
+    pkill -f "usb_debug_tool.main" 2>/dev/null && echo "Killed process" || echo "No running instance found"
+fi

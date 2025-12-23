@@ -1,0 +1,21 @@
+# USB Debug Tool Configuration
+#
+# Server settings
+port: 8080
+host: "0.0.0.0"
+auto_open_browser: true
+
+# Custom device names
+# Map vendor_id:product_id to friendly names
+# Find IDs by clicking on devices in the UI
+devices:
+  # Example entries:
+  # - vendor_id: "05e3"
+  #   product_id: "0610"
+  #   custom_name: "Main USB Hub"
+  #   notes: "Connected to monitor"
+
+  # - vendor_id: "046d"
+  #   product_id: "c52b"
+  #   custom_name: "Logitech Unifying Receiver"
+  #   notes: "Keyboard and mouse"

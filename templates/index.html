@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USB Debug Tool</title>
+
+    <!-- D3.js for tree visualization -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <!-- Lucide icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="dark-mode">
+    <header>
+        <h1>
+            <i data-lucide="usb"></i>
+            USB Debug Tool
+        </h1>
+        <div class="header-controls">
+            <button id="refresh-btn" title="Refresh device tree">
+                <i data-lucide="refresh-cw"></i>
+                Refresh
+            </button>
+            <button id="theme-toggle" title="Toggle dark/light mode">
+                <i data-lucide="moon"></i>
+            </button>
+            <span id="connection-status" class="status-disconnected">
+                <i data-lucide="wifi-off"></i>
+                Disconnected
+            </span>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <!-- Device Tree Panel -->
+            <section id="tree-panel" class="panel">
+                <div class="panel-header">
+                    <h2><i data-lucide="git-branch"></i> Device Tree</h2>
+                </div>
+                <div id="tree-container">
+                    <svg id="tree-svg"></svg>
+                </div>
+            </section>
+
+            <!-- Info Panel -->
+            <section id="info-panel" class="panel">
+                <div class="panel-header">
+                    <h2><i data-lucide="info"></i> Device Info</h2>
+                </div>
+                <div id="info-content">
+                    <p class="placeholder">Click a device to view details</p>
+                </div>
+            </section>
+        </div>
+
+        <!-- Event Log Panel -->
+        <section id="log-panel" class="panel">
+            <div class="panel-header">
+                <h2><i data-lucide="scroll-text"></i> Event Log</h2>
+                <button id="clear-log-btn" title="Clear log">
+                    <i data-lucide="trash-2"></i>
+                </button>
+            </div>
+            <div id="log-content">
+                <div class="log-placeholder">Waiting for events...</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Audio elements for notifications -->
+    <audio id="sound-connect" preload="auto">
+        <source src="/static/sounds/connect.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sound-disconnect" preload="auto">
+        <source src="/static/sounds/disconnect.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Device name edit modal -->
+    <div id="name-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Set Custom Name</h3>
+            <p id="modal-device-info"></p>
+            <input type="text" id="name-input" placeholder="Enter custom name">
+            <div class="modal-buttons">
+                <button id="name-save-btn" class="primary">Save</button>
+                <button id="name-cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/audio.js"></script>
+    <script src="/static/js/info-panel.js"></script>
+    <script src="/static/js/tree.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+#!/bin/bash
+# Start USB Debug Tool server
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+PID_FILE="/tmp/usb_debug_tool.pid"
+
+# Default settings
+HOST="${USB_DEBUG_HOST:-0.0.0.0}"
+PORT="${USB_DEBUG_PORT:-8080}"
+OPEN_BROWSER="${USB_DEBUG_OPEN_BROWSER:-1}"
+
+cd "$PROJECT_DIR"
+
+# Check if already running
+if [ -f "$PID_FILE" ]; then
+    OLD_PID=$(cat "$PID_FILE")
+    if kill -0 "$OLD_PID" 2>/dev/null; then
+        echo "USB Debug Tool is already running (PID: $OLD_PID)"
+        echo "Use stop_usb_debug to stop it first"
+        exit 1
+    else
+        rm -f "$PID_FILE"
+    fi
+fi
+
+# Check for sudo (required for full USB access)
+if [ "$EUID" -ne 0 ]; then
+    echo "Warning: Running without root privileges."
+    echo "Some features (device reset) may not work."
+    echo "Consider running with: sudo $0"
+    echo ""
+fi
+
+# Add src to PYTHONPATH
+export PYTHONPATH="$PROJECT_DIR/src:$PYTHONPATH"
+
+# Set environment variables
+export USB_DEBUG_HOST="$HOST"
+export USB_DEBUG_PORT="$PORT"
+
+if [ "$OPEN_BROWSER" = "0" ] || [ "$OPEN_BROWSER" = "false" ]; then
+    export USB_DEBUG_NO_BROWSER=1
+fi
+
+echo "Starting USB Debug Tool on http://$HOST:$PORT"
+
+# Start server
+python3 -m usb_debug_tool.main &
+SERVER_PID=$!
+
+echo $SERVER_PID > "$PID_FILE"
+echo "Server started (PID: $SERVER_PID)"
+
+# Wait a moment and check if it's running
+sleep 1
+if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+    echo "Error: Server failed to start"
+    rm -f "$PID_FILE"
+    exit 1
+fi
+
+echo "USB Debug Tool is running at http://localhost:$PORT"
