@@ -9,11 +9,39 @@ class App {
         this.themeToggle = document.getElementById('theme-toggle');
         this.refreshBtn = document.getElementById('refresh-btn');
         this.clearLogBtn = document.getElementById('clear-log-btn');
+        this.soundToggle = document.getElementById('sound-toggle');
+        this.soundModal = document.getElementById('sound-modal');
+        this.filterBtn = document.getElementById('filter-btn');
+        this.filterMenu = document.getElementById('filter-menu');
 
         this.darkMode = true;
         this.maxLogEntries = 100;
 
+        // Log filter settings
+        this.logFilters = this.loadLogFilters();
+
         this.init();
+    }
+
+    loadLogFilters() {
+        const defaults = { add: true, remove: true, error: true };
+        try {
+            const saved = localStorage.getItem('usbdebug_log_filters');
+            if (saved) {
+                return { ...defaults, ...JSON.parse(saved) };
+            }
+        } catch (e) {
+            console.warn('Could not load log filters:', e);
+        }
+        return defaults;
+    }
+
+    saveLogFilters() {
+        try {
+            localStorage.setItem('usbdebug_log_filters', JSON.stringify(this.logFilters));
+        } catch (e) {
+            console.warn('Could not save log filters:', e);
+        }
     }
 
     init() {
@@ -30,10 +58,153 @@ class App {
         this.refreshBtn.addEventListener('click', () => this.refresh());
         this.clearLogBtn.addEventListener('click', () => this.clearLog());
 
+        // Sound toggle
+        this.soundToggle.addEventListener('click', () => this.openSoundModal());
+        this.setupSoundModal();
+
+        // Log filters
+        this.setupLogFilters();
+
         // Initialize Lucide icons
         lucide.createIcons();
 
+        // Update sound button state
+        this.updateSoundButtonState();
+
         console.log('USB Debug Tool initialized');
+    }
+
+    setupSoundModal() {
+        const soundEnabled = document.getElementById('sound-enabled');
+        const soundConnectEnabled = document.getElementById('sound-connect-enabled');
+        const soundDisconnectEnabled = document.getElementById('sound-disconnect-enabled');
+        const soundErrorEnabled = document.getElementById('sound-error-enabled');
+        const soundCloseBtn = document.getElementById('sound-close-btn');
+
+        // Load current settings
+        const settings = window.audioManager.getSettings();
+        soundEnabled.checked = settings.enabled;
+        soundConnectEnabled.checked = settings.connect;
+        soundDisconnectEnabled.checked = settings.disconnect;
+        soundErrorEnabled.checked = settings.error;
+
+        // Handle changes
+        soundEnabled.addEventListener('change', (e) => {
+            window.audioManager.setEnabled(e.target.checked);
+            this.updateSoundButtonState();
+        });
+
+        soundConnectEnabled.addEventListener('change', (e) => {
+            window.audioManager.setConnectEnabled(e.target.checked);
+        });
+
+        soundDisconnectEnabled.addEventListener('change', (e) => {
+            window.audioManager.setDisconnectEnabled(e.target.checked);
+        });
+
+        soundErrorEnabled.addEventListener('change', (e) => {
+            window.audioManager.setErrorEnabled(e.target.checked);
+        });
+
+        // Close modal
+        soundCloseBtn.addEventListener('click', () => this.closeSoundModal());
+
+        // Close on backdrop click
+        this.soundModal.addEventListener('click', (e) => {
+            if (e.target === this.soundModal) {
+                this.closeSoundModal();
+            }
+        });
+    }
+
+    openSoundModal() {
+        // Update checkbox states
+        const settings = window.audioManager.getSettings();
+        document.getElementById('sound-enabled').checked = settings.enabled;
+        document.getElementById('sound-connect-enabled').checked = settings.connect;
+        document.getElementById('sound-disconnect-enabled').checked = settings.disconnect;
+        document.getElementById('sound-error-enabled').checked = settings.error;
+
+        this.soundModal.classList.remove('hidden');
+    }
+
+    closeSoundModal() {
+        this.soundModal.classList.add('hidden');
+    }
+
+    updateSoundButtonState() {
+        const settings = window.audioManager.getSettings();
+        const icon = this.soundToggle.querySelector('i');
+
+        if (settings.enabled) {
+            this.soundToggle.classList.remove('muted');
+            if (icon) {
+                icon.setAttribute('data-lucide', 'volume-2');
+                lucide.createIcons();
+            }
+        } else {
+            this.soundToggle.classList.add('muted');
+            if (icon) {
+                icon.setAttribute('data-lucide', 'volume-x');
+                lucide.createIcons();
+            }
+        }
+    }
+
+    setupLogFilters() {
+        const filterAdd = document.getElementById('filter-add');
+        const filterRemove = document.getElementById('filter-remove');
+        const filterError = document.getElementById('filter-error');
+
+        // Load current settings
+        filterAdd.checked = this.logFilters.add;
+        filterRemove.checked = this.logFilters.remove;
+        filterError.checked = this.logFilters.error;
+
+        // Handle changes
+        filterAdd.addEventListener('change', (e) => {
+            this.logFilters.add = e.target.checked;
+            this.saveLogFilters();
+            this.applyLogFilters();
+        });
+
+        filterRemove.addEventListener('change', (e) => {
+            this.logFilters.remove = e.target.checked;
+            this.saveLogFilters();
+            this.applyLogFilters();
+        });
+
+        filterError.addEventListener('change', (e) => {
+            this.logFilters.error = e.target.checked;
+            this.saveLogFilters();
+            this.applyLogFilters();
+        });
+
+        // Toggle filter menu
+        this.filterBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.filterMenu.classList.toggle('hidden');
+        });
+
+        // Close filter menu on outside click
+        document.addEventListener('click', (e) => {
+            if (!this.filterMenu.contains(e.target) && e.target !== this.filterBtn) {
+                this.filterMenu.classList.add('hidden');
+            }
+        });
+    }
+
+    applyLogFilters() {
+        const entries = this.logContainer.querySelectorAll('.log-entry');
+        entries.forEach(entry => {
+            if (entry.classList.contains('add')) {
+                entry.style.display = this.logFilters.add ? '' : 'none';
+            } else if (entry.classList.contains('remove')) {
+                entry.style.display = this.logFilters.remove ? '' : 'none';
+            } else if (entry.classList.contains('error')) {
+                entry.style.display = this.logFilters.error ? '' : 'none';
+            }
+        });
     }
 
     handleConnected() {
@@ -180,6 +351,15 @@ class App {
 
         if (color) {
             entry.style.borderLeftColor = color;
+        }
+
+        // Check if should be hidden by filter
+        if (type === 'add' && !this.logFilters.add) {
+            entry.style.display = 'none';
+        } else if (type === 'remove' && !this.logFilters.remove) {
+            entry.style.display = 'none';
+        } else if (type === 'error' && !this.logFilters.error) {
+            entry.style.display = 'none';
         }
 
         const now = new Date();

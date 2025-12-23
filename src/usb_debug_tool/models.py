@@ -38,6 +38,10 @@ class USBDevice(BaseModel):
     vendor_id: str = Field(description="Vendor ID in hex e.g. '05e3'")
     product_id: str = Field(description="Product ID in hex e.g. '0610'")
 
+    # Vendor/Product names from usb.ids database
+    vendor_name: Optional[str] = Field(default=None, description="Vendor name from usb.ids")
+    product_name: Optional[str] = Field(default=None, description="Product name from usb.ids")
+
     # Descriptors
     manufacturer: Optional[str] = Field(default=None, description="Manufacturer string")
     product: Optional[str] = Field(default=None, description="Product string")
@@ -77,9 +81,39 @@ class USBDevice(BaseModel):
             return self.custom_name
         if self.product:
             return self.product
-        if self.manufacturer:
-            return f"{self.manufacturer} Device"
+        if self.product_name:
+            return self.product_name
+
+        # Build name from vendor and device type
+        vendor = self.vendor_name or self.manufacturer
+        device_type = self._friendly_device_type()
+
+        if vendor and device_type:
+            return f"{vendor} ({device_type})"
+        if vendor:
+            return vendor
+        if device_type:
+            return f"Unknown ({device_type})"
+
+        # Last resort: use IDs
         return f"{self.vendor_id}:{self.product_id}"
+
+    def _friendly_device_type(self) -> Optional[str]:
+        """Get friendly name for device type."""
+        type_names = {
+            DeviceClass.HUB: "Hub",
+            DeviceClass.HID_KEYBOARD: "Keyboard",
+            DeviceClass.HID_MOUSE: "Mouse",
+            DeviceClass.HID_OTHER: "Input Device",
+            DeviceClass.AUDIO: "Audio",
+            DeviceClass.VIDEO: "Webcam",
+            DeviceClass.STORAGE: "Storage",
+            DeviceClass.PRINTER: "Printer",
+            DeviceClass.WIRELESS: "Wireless",
+            DeviceClass.COMM: "Serial",
+            DeviceClass.UNKNOWN: None,
+        }
+        return type_names.get(self.device_class)
 
     @property
     def unique_id(self) -> str:
@@ -91,6 +125,11 @@ class USBDevice(BaseModel):
         data = self.model_dump()
         data["display_name"] = self.display_name
         data["unique_id"] = self.unique_id
+
+        # Recursively serialize children
+        if self.children:
+            data["children"] = [child.model_dump_for_frontend() for child in self.children]
+
         return data
 
 

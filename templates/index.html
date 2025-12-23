@@ -25,6 +25,9 @@
                 <i data-lucide="refresh-cw"></i>
                 Refresh
             </button>
+            <button id="sound-toggle" title="Toggle sounds">
+                <i data-lucide="volume-2"></i>
+            </button>
             <button id="theme-toggle" title="Toggle dark/light mode">
                 <i data-lucide="moon"></i>
             </button>
@@ -37,6 +40,44 @@
 
     <main>
         <div class="container">
+            <!-- Left Column: Info + Log stacked -->
+            <div class="left-column">
+                <!-- Info Panel -->
+                <section id="info-panel" class="panel">
+                    <div class="panel-header">
+                        <h2><i data-lucide="info"></i> Device Info</h2>
+                    </div>
+                    <div id="info-content">
+                        <p class="placeholder">Click a device to view details</p>
+                    </div>
+                </section>
+
+                <!-- Event Log Panel -->
+                <section id="log-panel" class="panel">
+                    <div class="panel-header">
+                        <h2><i data-lucide="scroll-text"></i> Event Log</h2>
+                        <div class="log-controls">
+                            <div class="filter-dropdown">
+                                <button id="filter-btn" title="Filter events">
+                                    <i data-lucide="filter"></i>
+                                </button>
+                                <div id="filter-menu" class="dropdown-menu hidden">
+                                    <label><input type="checkbox" id="filter-add" checked> Device Added</label>
+                                    <label><input type="checkbox" id="filter-remove" checked> Device Removed</label>
+                                    <label><input type="checkbox" id="filter-error" checked> Errors</label>
+                                </div>
+                            </div>
+                            <button id="clear-log-btn" title="Clear log">
+                                <i data-lucide="trash-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="log-content">
+                        <div class="log-placeholder">Waiting for events...</div>
+                    </div>
+                </section>
+            </div>
+
             <!-- Device Tree Panel -->
             <section id="tree-panel" class="panel">
                 <div class="panel-header">
@@ -46,30 +87,7 @@
                     <svg id="tree-svg"></svg>
                 </div>
             </section>
-
-            <!-- Info Panel -->
-            <section id="info-panel" class="panel">
-                <div class="panel-header">
-                    <h2><i data-lucide="info"></i> Device Info</h2>
-                </div>
-                <div id="info-content">
-                    <p class="placeholder">Click a device to view details</p>
-                </div>
-            </section>
         </div>
-
-        <!-- Event Log Panel -->
-        <section id="log-panel" class="panel">
-            <div class="panel-header">
-                <h2><i data-lucide="scroll-text"></i> Event Log</h2>
-                <button id="clear-log-btn" title="Clear log">
-                    <i data-lucide="trash-2"></i>
-                </button>
-            </div>
-            <div id="log-content">
-                <div class="log-placeholder">Waiting for events...</div>
-            </div>
-        </section>
     </main>
 
     <!-- Audio elements for notifications -->
@@ -89,6 +107,36 @@
             <div class="modal-buttons">
                 <button id="name-save-btn" class="primary">Save</button>
                 <button id="name-cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sound settings modal -->
+    <div id="sound-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Sound Settings</h3>
+            <div class="sound-settings">
+                <label class="sound-option">
+                    <input type="checkbox" id="sound-enabled" checked>
+                    <span>Enable sounds</span>
+                </label>
+                <div class="sound-sub-options">
+                    <label class="sound-option">
+                        <input type="checkbox" id="sound-connect-enabled" checked>
+                        <span>Device connected</span>
+                    </label>
+                    <label class="sound-option">
+                        <input type="checkbox" id="sound-disconnect-enabled" checked>
+                        <span>Device disconnected</span>
+                    </label>
+                    <label class="sound-option">
+                        <input type="checkbox" id="sound-error-enabled" checked>
+                        <span>Errors</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="sound-close-btn" class="primary">Close</button>
             </div>
         </div>
     </div>

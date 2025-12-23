@@ -92,6 +92,14 @@ class InfoPanel {
                     <h4>Identification</h4>
                     <div class="info-grid">
                         <div class="info-item">
+                            <span class="label">Vendor</span>
+                            <span class="value">${device.vendor_name || device.vendor_id}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Product</span>
+                            <span class="value">${device.product_name || device.product_id}</span>
+                        </div>
+                        <div class="info-item">
                             <span class="label">Vendor ID</span>
                             <span class="value">${device.vendor_id}</span>
                         </div>

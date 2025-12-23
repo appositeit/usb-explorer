@@ -13,12 +13,15 @@ from typing import Callable, Optional
 import pyudev
 
 from .models import USBDevice, DeviceClass, USBEvent, EventType
+from .vendor_lookup import get_usb_id_database
 
 logger = logging.getLogger(__name__)
 
 
 def get_device_class(device: pyudev.Device) -> DeviceClass:
     """Determine device class from udev properties."""
+    context = device.context
+
     # Check driver first for quick classification
     driver = device.get("DRIVER", "")
 
@@ -27,7 +30,6 @@ def get_device_class(device: pyudev.Device) -> DeviceClass:
 
     if driver in ("usbhid", "hid-generic"):
         # Try to distinguish keyboard vs mouse
-        id_input = device.get("ID_INPUT", "")
         if device.get("ID_INPUT_KEYBOARD"):
             return DeviceClass.HID_KEYBOARD
         if device.get("ID_INPUT_MOUSE"):
@@ -49,11 +51,37 @@ def get_device_class(device: pyudev.Device) -> DeviceClass:
     if driver in ("btusb", "ath3k", "rtl8xxxu"):
         return DeviceClass.WIRELESS
 
-    if driver in ("cdc_acm", "cdc_ether", "ch341", "cp210x", "ftdi_sio"):
+    if driver in ("cdc_acm", "cdc_ether", "ch341", "cp210x", "ftdi_sio", "pl2303"):
         return DeviceClass.COMM
 
-    # Check device class from USB descriptor
+    # Check ID_TYPE which udev sets based on detected type
+    id_type = device.get("ID_TYPE", "")
+    if id_type == "video":
+        return DeviceClass.VIDEO
+    if id_type == "audio":
+        return DeviceClass.AUDIO
+    if id_type == "disk":
+        return DeviceClass.STORAGE
+
+    # Check ID_INPUT properties (set for HID devices)
+    if device.get("ID_INPUT_KEYBOARD"):
+        return DeviceClass.HID_KEYBOARD
+    if device.get("ID_INPUT_MOUSE"):
+        return DeviceClass.HID_MOUSE
+    if device.get("ID_INPUT"):
+        return DeviceClass.HID_OTHER
+
+    # Check device class from USB descriptor - read from sysfs if not in udev
     bDeviceClass = device.get("bDeviceClass")
+    if not bDeviceClass:
+        # Try reading directly from sysfs
+        try:
+            class_path = Path(device.sys_path) / "bDeviceClass"
+            if class_path.exists():
+                bDeviceClass = class_path.read_text().strip()
+        except Exception:
+            pass
+
     if bDeviceClass:
         try:
             class_code = int(bDeviceClass, 16) if isinstance(bDeviceClass, str) else int(bDeviceClass)
@@ -75,6 +103,68 @@ def get_device_class(device: pyudev.Device) -> DeviceClass:
                 return DeviceClass.WIRELESS
         except (ValueError, TypeError):
             pass
+
+    # Look at child interfaces for classification (USB devices with class 0x00)
+    # Interfaces have the actual class info
+    try:
+        for child in context.list_devices(
+            subsystem="usb",
+            DEVTYPE="usb_interface",
+            parent=device
+        ):
+            child_driver = child.get("DRIVER", "")
+
+            # Check driver on interfaces
+            if child_driver in ("usbhid", "hid-generic", "hid"):
+                # Look deeper for input type
+                for input_dev in context.list_devices(subsystem="input", parent=child):
+                    if input_dev.get("ID_INPUT_KEYBOARD"):
+                        return DeviceClass.HID_KEYBOARD
+                    if input_dev.get("ID_INPUT_MOUSE"):
+                        return DeviceClass.HID_MOUSE
+                return DeviceClass.HID_OTHER
+
+            if child_driver in ("snd-usb-audio", "snd_usb_audio"):
+                return DeviceClass.AUDIO
+
+            if child_driver in ("uvcvideo", "uvc"):
+                return DeviceClass.VIDEO
+
+            if child_driver in ("usb-storage", "uas"):
+                return DeviceClass.STORAGE
+
+            if child_driver in ("usblp",):
+                return DeviceClass.PRINTER
+
+            if child_driver in ("btusb", "ath3k", "rtl8xxxu"):
+                return DeviceClass.WIRELESS
+
+            if child_driver in ("cdc_acm", "cdc_ether", "ch341", "cp210x", "ftdi_sio", "pl2303"):
+                return DeviceClass.COMM
+
+            # Check interface class
+            bInterfaceClass = child.get("bInterfaceClass")
+            if bInterfaceClass:
+                try:
+                    iface_class = int(bInterfaceClass, 16) if isinstance(bInterfaceClass, str) else int(bInterfaceClass)
+                    if iface_class == 1:  # Audio
+                        return DeviceClass.AUDIO
+                    if iface_class == 2:  # Communications
+                        return DeviceClass.COMM
+                    if iface_class == 3:  # HID
+                        return DeviceClass.HID_OTHER
+                    if iface_class == 7:  # Printer
+                        return DeviceClass.PRINTER
+                    if iface_class == 8:  # Mass Storage
+                        return DeviceClass.STORAGE
+                    if iface_class == 14:  # Video
+                        return DeviceClass.VIDEO
+                    if iface_class == 224:  # Wireless
+                        return DeviceClass.WIRELESS
+                except (ValueError, TypeError):
+                    pass
+    except Exception as e:
+        logger.debug(f"Error checking child interfaces: {e}")
 
     return DeviceClass.UNKNOWN
 
@@ -128,6 +218,11 @@ def build_usb_device(device: pyudev.Device, config_lookup: Optional[dict] = None
         vendor_id = device.get("ID_VENDOR_ID", "0000")
         product_id = device.get("ID_MODEL_ID", "0000")
 
+        # Look up vendor and product names from usb.ids database
+        usb_db = get_usb_id_database()
+        vendor_name = usb_db.get_vendor(vendor_id)
+        product_name = usb_db.get_product(vendor_id, product_id)
+
         # Check for custom name in config
         custom_name = None
         if config_lookup:
@@ -165,6 +260,8 @@ def build_usb_device(device: pyudev.Device, config_lookup: Optional[dict] = None
             port_path=port_path,
             vendor_id=vendor_id,
             product_id=product_id,
+            vendor_name=vendor_name,
+            product_name=product_name,
             manufacturer=device.get("ID_VENDOR") or device.get("ID_VENDOR_FROM_DATABASE"),
             product=device.get("ID_MODEL") or device.get("ID_MODEL_FROM_DATABASE"),
             serial=device.get("ID_SERIAL_SHORT"),

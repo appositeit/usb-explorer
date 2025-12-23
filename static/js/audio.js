@@ -1,10 +1,13 @@
 /**
  * Audio notification handler with user gesture requirement handling.
+ * Supports per-event-type sound settings.
  */
 
 class AudioManager {
     constructor() {
-        this.enabled = true;
+        // Load settings from localStorage or use defaults
+        this.settings = this.loadSettings();
+
         this.initialized = false;
         this.connectSound = document.getElementById('sound-connect');
         this.disconnectSound = document.getElementById('sound-disconnect');
@@ -14,6 +17,33 @@ class AudioManager {
 
         // Initialize on first user interaction
         this.initOnInteraction();
+    }
+
+    loadSettings() {
+        const defaults = {
+            enabled: true,
+            connect: true,
+            disconnect: true,
+            error: true
+        };
+
+        try {
+            const saved = localStorage.getItem('usbdebug_sound_settings');
+            if (saved) {
+                return { ...defaults, ...JSON.parse(saved) };
+            }
+        } catch (e) {
+            console.warn('Could not load sound settings:', e);
+        }
+        return defaults;
+    }
+
+    saveSettings() {
+        try {
+            localStorage.setItem('usbdebug_sound_settings', JSON.stringify(this.settings));
+        } catch (e) {
+            console.warn('Could not save sound settings:', e);
+        }
     }
 
     initOnInteraction() {
@@ -39,7 +69,7 @@ class AudioManager {
     }
 
     async playConnect() {
-        if (!this.enabled) return;
+        if (!this.settings.enabled || !this.settings.connect) return;
 
         try {
             if (this.connectSound && this.connectSound.src) {
@@ -55,7 +85,7 @@ class AudioManager {
     }
 
     async playDisconnect() {
-        if (!this.enabled) return;
+        if (!this.settings.enabled || !this.settings.disconnect) return;
 
         try {
             if (this.disconnectSound && this.disconnectSound.src) {
@@ -71,7 +101,7 @@ class AudioManager {
     }
 
     playError() {
-        if (!this.enabled) return;
+        if (!this.settings.enabled || !this.settings.error) return;
         // Two quick low beeps
         this.playTone(330, 0.08, 'square');
         setTimeout(() => this.playTone(330, 0.08, 'square'), 120);
@@ -102,12 +132,33 @@ class AudioManager {
     }
 
     toggle() {
-        this.enabled = !this.enabled;
-        return this.enabled;
+        this.settings.enabled = !this.settings.enabled;
+        this.saveSettings();
+        return this.settings.enabled;
     }
 
     setEnabled(enabled) {
-        this.enabled = enabled;
+        this.settings.enabled = enabled;
+        this.saveSettings();
+    }
+
+    setConnectEnabled(enabled) {
+        this.settings.connect = enabled;
+        this.saveSettings();
+    }
+
+    setDisconnectEnabled(enabled) {
+        this.settings.disconnect = enabled;
+        this.saveSettings();
+    }
+
+    setErrorEnabled(enabled) {
+        this.settings.error = enabled;
+        this.saveSettings();
+    }
+
+    getSettings() {
+        return { ...this.settings };
     }
 }
 
