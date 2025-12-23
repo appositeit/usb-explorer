@@ -160,6 +160,13 @@ class USBEvent(BaseModel):
             msg["data"] = [d.model_dump_for_frontend() for d in (self.devices or [])]
         elif self.type == EventType.DEVICE_REMOVED:
             msg["port_path"] = self.port_path
+            # Include device data so frontend can show info about removed device
+            if self.device:
+                msg["data"] = self.device.model_dump_for_frontend()
+        elif self.type == EventType.DEVICE_ERROR:
+            msg["port_path"] = self.port_path
+            if self.device:
+                msg["data"] = self.device.model_dump_for_frontend()
         elif self.device:
             msg["data"] = self.device.model_dump_for_frontend()
 

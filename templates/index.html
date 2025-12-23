@@ -82,6 +82,13 @@
             <section id="tree-panel" class="panel">
                 <div class="panel-header">
                     <h2><i data-lucide="git-branch"></i> Device Tree</h2>
+                    <div class="spacing-control">
+                        <label for="spacing-slider" title="Adjust vertical spacing">
+                            <i data-lucide="move-vertical"></i>
+                        </label>
+                        <input type="range" id="spacing-slider" min="5" max="60" value="42" title="Node spacing">
+                        <span id="spacing-value">42</span>
+                    </div>
                 </div>
                 <div id="tree-container">
                     <svg id="tree-svg"></svg>

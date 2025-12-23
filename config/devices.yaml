@@ -9,6 +9,11 @@ auto_open_browser: true
 # Map vendor_id:product_id to friendly names
 # Find IDs by clicking on devices in the UI
 devices:
+  - vendor_id: "1462"
+    product_id: "7c37"
+    custom_name: "Motherboard RGB Lighting"
+    notes: "MSI Mystic Light controller"
+
   # Example entries:
   # - vendor_id: "05e3"
   #   product_id: "0610"

@@ -14,7 +14,9 @@ from .models import AppConfig, DeviceConfig
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_CONFIG_PATH = Path("config/devices.yaml")
+# Use absolute path based on project root
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_CONFIG_PATH = _PROJECT_ROOT / "config" / "devices.yaml"
 
 
 class ConfigManager:
@@ -106,6 +108,8 @@ class ConfigManager:
 
     def get_device_lookup(self) -> dict[str, str]:
         """Get the full vendor:product -> name lookup table."""
+        if self._config is None:
+            self.load()
         return self._device_lookup.copy()
 
     def set_device_name(self, vendor_id: str, product_id: str, name: str) -> None:

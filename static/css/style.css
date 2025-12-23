@@ -52,22 +52,22 @@ body {
     background-color: var(--bg-secondary);
     color: var(--text-primary);
     line-height: 1.5;
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* Header */
 header {
     height: var(--header-height);
+    flex-shrink: 0;  /* Don't shrink header */
     background-color: var(--bg-primary);
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 12px;
-    position: sticky;
-    top: 0;
     z-index: 100;
 }
 
@@ -157,6 +157,7 @@ button.primary:hover {
 /* Main layout */
 main {
     flex: 1;
+    min-height: 0;  /* Allow shrinking in flexbox */
     padding: var(--panel-gap);
     display: flex;
     flex-direction: column;
@@ -179,6 +180,8 @@ main {
     min-width: 280px;
     max-width: 350px;
     flex: 0 0 320px;
+    min-height: 0;  /* Allow shrinking in flexbox */
+    overflow: hidden;
 }
 
 /* Panels */
@@ -220,6 +223,37 @@ main {
     padding: 2px 6px;
     background: transparent;
     border: none;
+}
+
+/* Spacing control */
+.spacing-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.spacing-control label {
+    display: flex;
+    align-items: center;
+    color: var(--text-muted);
+}
+
+.spacing-control label svg {
+    width: 14px;
+    height: 14px;
+}
+
+.spacing-control input[type="range"] {
+    width: 80px;
+    height: 4px;
+    cursor: pointer;
+    accent-color: var(--accent-color);
+}
+
+.spacing-control span {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    min-width: 20px;
 }
 
 /* Tree panel */
@@ -372,7 +406,7 @@ main {
 /* Log panel */
 #log-panel {
     flex: 1;
-    min-height: 120px;
+    min-height: 0;  /* Allow shrinking in flexbox */
     overflow: hidden;
 }
 
@@ -442,6 +476,12 @@ main {
     align-items: center;
     gap: 6px;
     animation: slideIn 0.3s ease;
+    border-left: 3px solid transparent;
+    transition: filter 0.15s ease;
+}
+
+.log-entry[data-port-path]:hover {
+    filter: brightness(1.2);
 }
 
 @keyframes slideIn {

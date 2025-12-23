@@ -238,7 +238,7 @@ class App {
                 break;
 
             case 'device_error':
-                this.handleDeviceError(data.port_path, data.error);
+                this.handleDeviceError(data.port_path, data.error, data.data);
                 break;
 
             case 'name_updated':
@@ -273,9 +273,12 @@ class App {
         // Add to tree
         window.usbTree.addDevice(device);
 
-        // Log entry with device colour
-        const color = this.getDeviceColor(device.device_class);
-        this.addLogEntry('add', `Connected: ${device.display_name}`, color);
+        // Log entry with device info for click handling
+        this.addLogEntry('add', `Connected: ${device.display_name}`, {
+            portPath: device.port_path,
+            deviceClass: device.device_class,
+            device: device
+        });
     }
 
     handleDeviceRemoved(portPath, device) {
@@ -288,9 +291,12 @@ class App {
         // Remove from tree
         window.usbTree.removeDevice(portPath);
 
-        // Log entry
-        const color = device ? this.getDeviceColor(device.device_class) : null;
-        this.addLogEntry('remove', `Disconnected: ${name}`, color);
+        // Log entry - pass device data so clicking shows the last known info
+        this.addLogEntry('remove', `Disconnected: ${name}`, {
+            portPath: portPath,
+            deviceClass: device ? device.device_class : 'unknown',
+            device: device  // Keep device data for info panel display
+        });
 
         // Clear info panel if showing this device
         if (window.infoPanel.currentDevice &&
@@ -299,14 +305,24 @@ class App {
         }
     }
 
-    handleDeviceError(portPath, errorMessage) {
+    handleDeviceError(portPath, errorMessage, deviceData) {
+        // Skip if no port path (malformed error event)
+        if (!portPath) {
+            console.log('Ignoring error event with no port path:', errorMessage);
+            return;
+        }
+
         console.log('Device error:', portPath, errorMessage);
 
         // Play error sound
         window.audioManager.playError();
 
-        // Update tree
-        const device = window.usbTree.findDevice(portPath);
+        // Update tree - try to find device, or use provided data
+        let device = window.usbTree.findDevice(portPath);
+        if (!device && deviceData) {
+            device = deviceData;
+        }
+
         if (device) {
             if (!device.errors) device.errors = [];
             device.errors.push(errorMessage);
@@ -320,8 +336,13 @@ class App {
             }
         }
 
-        // Log entry
-        this.addLogEntry('error', `Error on ${portPath}: ${errorMessage}`);
+        // Log entry with device name if available
+        const deviceName = device ? device.display_name : portPath;
+        this.addLogEntry('error', `Error: ${deviceName} - ${errorMessage}`, {
+            portPath: portPath,
+            deviceClass: device ? device.device_class : 'unknown',
+            device: device
+        });
     }
 
     getDeviceColor(deviceClass) {
@@ -340,7 +361,7 @@ class App {
         return colors[deviceClass] || colors.unknown;
     }
 
-    addLogEntry(type, message, color = null) {
+    addLogEntry(type, message, deviceInfo = null) {
         // Remove placeholder
         const placeholder = this.logContainer.querySelector('.log-placeholder');
         if (placeholder) placeholder.remove();
@@ -349,8 +370,25 @@ class App {
         const entry = document.createElement('div');
         entry.className = `log-entry ${type}`;
 
-        if (color) {
+        // Apply device-type coloring if available
+        if (deviceInfo && deviceInfo.deviceClass) {
+            const color = this.getDeviceColor(deviceInfo.deviceClass);
             entry.style.borderLeftColor = color;
+            entry.style.borderLeftWidth = '4px';
+            // Subtle background tint based on device color
+            entry.style.background = `linear-gradient(90deg, ${color}22 0%, transparent 30%)`;
+        }
+
+        // Store port path for click handling
+        if (deviceInfo && deviceInfo.portPath) {
+            entry.dataset.portPath = deviceInfo.portPath;
+            entry.style.cursor = 'pointer';
+            entry.title = `Click to select device (${deviceInfo.portPath})`;
+
+            // Add click handler to select device
+            entry.addEventListener('click', () => {
+                this.selectDeviceFromLog(deviceInfo.portPath, deviceInfo.device);
+            });
         }
 
         // Check if should be hidden by filter
@@ -388,6 +426,23 @@ class App {
         // Limit entries
         while (this.logContainer.children.length > this.maxLogEntries) {
             this.logContainer.removeChild(this.logContainer.firstChild);
+        }
+    }
+
+    selectDeviceFromLog(portPath, cachedDevice) {
+        // Try to find the device in the current tree
+        const device = window.usbTree.findDevice(portPath);
+
+        if (device) {
+            // Device exists - select it in tree and show info
+            window.usbTree.selectDevice(portPath);
+            window.infoPanel.showDevice(device);
+        } else if (cachedDevice) {
+            // Device was removed but we have cached data - show info only
+            window.infoPanel.showDevice(cachedDevice);
+        } else {
+            // No device data available
+            console.log('Device not found:', portPath);
         }
     }
 

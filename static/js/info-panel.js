@@ -100,20 +100,30 @@ class InfoPanel {
                             <span class="value">${device.product_name || device.product_id}</span>
                         </div>
                         <div class="info-item">
-                            <span class="label">Vendor ID</span>
-                            <span class="value">${device.vendor_id}</span>
+                            <span class="label">VID:PID</span>
+                            <span class="value">${device.vendor_id}:${device.product_id}</span>
                         </div>
                         <div class="info-item">
-                            <span class="label">Product ID</span>
-                            <span class="value">${device.product_id}</span>
+                            <span class="label">Serial</span>
+                            <span class="value">${device.serial || '(none)'}</span>
                         </div>
                         <div class="info-item">
-                            <span class="label">Bus</span>
-                            <span class="value">${device.bus}</span>
+                            <span class="label">Port Path</span>
+                            <span class="value">${device.port_path}</span>
                         </div>
                         <div class="info-item">
                             <span class="label">Device #</span>
-                            <span class="value">${device.device}</span>
+                            <span class="value">${device.device} (bus ${device.bus})</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h4>Unique Reference</h4>
+                    <div class="info-grid">
+                        <div class="info-item" style="grid-column: span 2;">
+                            <span class="label">${device.serial ? 'By Serial (stable)' : 'By Port (positional)'}</span>
+                            <span class="value" style="font-family: monospace; font-size: 0.7rem;">${device.serial ? device.vendor_id + ':' + device.product_id + ':' + device.serial : device.vendor_id + ':' + device.product_id + '@' + device.port_path}</span>
                         </div>
                     </div>
                 </div>
@@ -122,19 +132,15 @@ class InfoPanel {
                     <h4>Connection</h4>
                     <div class="info-grid">
                         <div class="info-item">
-                            <span class="label">Port Path</span>
-                            <span class="value">${device.port_path}</span>
-                        </div>
-                        <div class="info-item">
                             <span class="label">Speed</span>
                             <span class="value">${this.formatSpeed(device.speed)}</span>
                         </div>
-                        ${portsInfo}
-                        ${childrenInfo}
                         <div class="info-item">
                             <span class="label">Power</span>
                             <span class="value">${device.power_draw_ma}mA</span>
                         </div>
+                        ${portsInfo}
+                        ${childrenInfo}
                         <div class="info-item">
                             <span class="label">Driver</span>
                             <span class="value">${device.driver || 'None'}</span>

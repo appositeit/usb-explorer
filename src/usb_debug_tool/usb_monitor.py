@@ -172,14 +172,15 @@ def get_device_class(device: pyudev.Device) -> DeviceClass:
 def parse_speed(speed_str: str) -> str:
     """Convert speed value to human-readable format."""
     if not speed_str:
-        return "Unknown"
+        return ""
     try:
         speed = int(speed_str)
         if speed >= 5000:
             return f"{speed // 1000}G"
         return f"{speed}M"
     except ValueError:
-        return speed_str
+        # Return empty string for unparseable values instead of raw string
+        return ""
 
 
 def build_usb_device(device: pyudev.Device, config_lookup: Optional[dict] = None) -> Optional[USBDevice]:
@@ -254,6 +255,17 @@ def build_usb_device(device: pyudev.Device, config_lookup: Optional[dict] = None
         # Determine if root hub
         is_root_hub = device.get("DEVTYPE") == "usb_device" and devpath.endswith(f"/usb{bus_bare}")
 
+        # Calculate parent path from port path
+        # e.g., "5-1.2.4" -> parent is "5-1.2"
+        # e.g., "5-1" -> parent is "usb5"
+        parent_path = None
+        if not is_root_hub and port_path:
+            if "." in port_path:
+                parent_path = port_path.rsplit(".", 1)[0]
+            elif "-" in port_path:
+                bus = port_path.split("-")[0]
+                parent_path = f"usb{bus}"
+
         usb_device = USBDevice(
             bus=int(busnum),
             device=int(devnum),
@@ -274,6 +286,7 @@ def build_usb_device(device: pyudev.Device, config_lookup: Optional[dict] = None
             custom_name=custom_name,
             is_root_hub=is_root_hub,
             driver=device.get("DRIVER"),
+            parent_path=parent_path,
             children=[],
             errors=[],
         )

@@ -44,23 +44,30 @@ usb_monitor: USBMonitor | None = None
 dmesg_monitor: DmesgMonitor | None = None
 config_manager: ConfigManager | None = None
 ws_manager: WebSocketManager | None = None
+main_loop: asyncio.AbstractEventLoop | None = None
 
 # Background tasks
 _background_tasks: list[asyncio.Task] = []
 
 
 def handle_usb_event(event: USBEvent) -> None:
-    """Handle USB events from the monitor."""
-    # Run broadcast in the event loop
-    loop = asyncio.get_event_loop()
-    if loop.is_running():
-        asyncio.create_task(ws_manager.broadcast_event(event))  # type: ignore
+    """Handle USB events from the monitor (called from background thread)."""
+    if main_loop is None or ws_manager is None:
+        return
+
+    # Schedule the coroutine on the main event loop from this background thread
+    main_loop.call_soon_threadsafe(
+        lambda: main_loop.create_task(ws_manager.broadcast_event(event))
+    )
 
 
 def handle_dmesg_error(error: Any) -> None:
-    """Handle dmesg errors."""
+    """Handle dmesg errors (called from background thread)."""
     from .dmesg_parser import USBError
     if not isinstance(error, USBError):
+        return
+
+    if main_loop is None or ws_manager is None:
         return
 
     # Create error event
@@ -70,17 +77,21 @@ def handle_dmesg_error(error: Any) -> None:
         error_message=error.message,
     )
 
-    loop = asyncio.get_event_loop()
-    if loop.is_running():
-        asyncio.create_task(ws_manager.broadcast_event(event))  # type: ignore
+    # Schedule the coroutine on the main event loop from this background thread
+    main_loop.call_soon_threadsafe(
+        lambda e=event: main_loop.create_task(ws_manager.broadcast_event(e))
+    )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
-    global usb_monitor, dmesg_monitor, config_manager, ws_manager
+    global usb_monitor, dmesg_monitor, config_manager, ws_manager, main_loop
 
     logger.info("Starting USB Debug Tool...")
+
+    # Store the main event loop for use in background thread callbacks
+    main_loop = asyncio.get_running_loop()
 
     # Initialise components
     config_manager = get_config_manager()

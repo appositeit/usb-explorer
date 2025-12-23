@@ -43,6 +43,10 @@ class USBTree {
         // Animation state
         this.removingNodes = new Set();
         this.addingNodes = new Set();
+        this.pendingRemovals = new Map();  // portPath -> timeoutId
+
+        // Node spacing (adjustable via slider)
+        this.nodeSpacing = parseInt(localStorage.getItem('usbTreeSpacing')) || 42;
 
         this.init();
     }
@@ -54,6 +58,22 @@ class USBTree {
         // Resize handler
         window.addEventListener('resize', () => this.resize());
         this.resize();
+
+        // Spacing slider setup
+        const spacingSlider = document.getElementById('spacing-slider');
+        const spacingValue = document.getElementById('spacing-value');
+        if (spacingSlider) {
+            // Set initial value from stored preference
+            spacingSlider.value = this.nodeSpacing;
+            if (spacingValue) spacingValue.textContent = this.nodeSpacing;
+
+            spacingSlider.addEventListener('input', (e) => {
+                this.nodeSpacing = parseInt(e.target.value);
+                if (spacingValue) spacingValue.textContent = this.nodeSpacing;
+                localStorage.setItem('usbTreeSpacing', this.nodeSpacing);
+                this.render();
+            });
+        }
     }
 
     resize() {
@@ -101,9 +121,26 @@ class USBTree {
     }
 
     addDevice(device) {
+        // Cancel any pending removal for this device (handles quick reconnects)
+        if (this.pendingRemovals.has(device.port_path)) {
+            clearTimeout(this.pendingRemovals.get(device.port_path));
+            this.pendingRemovals.delete(device.port_path);
+            this.removingNodes.delete(device.port_path);
+            console.log('Cancelled pending removal for:', device.port_path);
+        }
+
         // Mark as adding
         this.addingNodes.add(device.port_path);
         setTimeout(() => this.addingNodes.delete(device.port_path), 600);
+
+        // Check if device already exists (could happen with quick reconnect)
+        const existing = this.findDevice(device.port_path);
+        if (existing) {
+            // Update existing device data instead of adding duplicate
+            Object.assign(existing, device);
+            this.render();
+            return;
+        }
 
         // Find parent and add
         const parentPath = device.parent_path;
@@ -137,13 +174,15 @@ class USBTree {
             device.children.forEach(markChildren);
         }
 
-        // Wait for animation then remove
-        setTimeout(() => {
-            this.removingNodes.clear();
+        // Store timeout so it can be cancelled if device reconnects quickly
+        const timeoutId = setTimeout(() => {
+            this.pendingRemovals.delete(portPath);
+            this.removingNodes.delete(portPath);
             this.devices = this.filterDevice(this.devices, portPath);
             this.render();
         }, 500);
 
+        this.pendingRemovals.set(portPath, timeoutId);
         this.render();
     }
 
@@ -185,104 +224,101 @@ class USBTree {
     }
 
     /**
-     * Detect physical hub groups - consecutive hubs with same vendor/product
-     * that are likely part of the same physical device.
+     * Detect physical hub groups - all hubs with same vendor/product
+     * under a common ancestor are likely part of the same physical device.
      */
     detectHubGroups(rootNode) {
         const groups = [];
-        const visited = new Set();
 
-        const findHubChain = (node, chain = []) => {
-            if (!node || visited.has(node.data.port_path)) return chain;
-
-            const isHub = node.data.device_class === 'hub';
-            const hubKey = `${node.data.vendor_id}:${node.data.product_id}`;
-
-            if (!isHub) return chain;
-
-            // Start or continue a chain
-            if (chain.length === 0) {
-                chain.push({ node, key: hubKey });
-                visited.add(node.data.port_path);
-            }
-
-            // Look for child hubs with same vendor/product
-            if (node.children) {
-                for (const child of node.children) {
-                    const childIsHub = child.data.device_class === 'hub';
-                    const childKey = `${child.data.vendor_id}:${child.data.product_id}`;
-
-                    if (childIsHub && childKey === hubKey && !visited.has(child.data.port_path)) {
-                        chain.push({ node: child, key: childKey });
-                        visited.add(child.data.port_path);
-                        findHubChain(child, chain);
-                    }
-                }
-            }
-
-            return chain;
-        };
-
-        // Traverse all nodes to find hub chains
-        const traverse = (node) => {
+        // Collect all hubs with their ancestry info
+        const allHubs = [];
+        const collectHubs = (node, ancestors = []) => {
             if (!node) return;
 
-            if (node.data.device_class === 'hub' && !visited.has(node.data.port_path)) {
-                const chain = findHubChain(node, []);
-                if (chain.length > 1) {
-                    groups.push(chain);
-                }
+            if (node.data.device_class === 'hub' && node.data.port_path !== 'root') {
+                allHubs.push({
+                    node,
+                    key: `${node.data.vendor_id}:${node.data.product_id}`,
+                    ancestors: [...ancestors],
+                    portPath: node.data.port_path
+                });
             }
 
             if (node.children) {
-                node.children.forEach(traverse);
+                const newAncestors = node.data.port_path !== 'root'
+                    ? [...ancestors, node.data.port_path]
+                    : ancestors;
+                node.children.forEach(child => collectHubs(child, newAncestors));
             }
         };
+        collectHubs(rootNode);
 
-        if (rootNode.children) {
-            rootNode.children.forEach(traverse);
+        // Group hubs by vendor:product that share a common hub ancestor
+        const used = new Set();
+
+        for (const hub of allHubs) {
+            if (used.has(hub.portPath)) continue;
+
+            // Find all hubs with same key that are descendants of this hub
+            // OR siblings under the same parent hub
+            const group = [hub];
+            used.add(hub.portPath);
+
+            for (const other of allHubs) {
+                if (used.has(other.portPath)) continue;
+                if (other.key !== hub.key) continue;
+
+                // Check if other is a descendant of hub
+                const isDescendant = other.ancestors.includes(hub.portPath);
+
+                // Check if they share a common hub ancestor with same vendor
+                const shareAncestor = hub.ancestors.some(ancestorPath => {
+                    const ancestorHub = allHubs.find(h => h.portPath === ancestorPath);
+                    return ancestorHub && ancestorHub.key === hub.key &&
+                           other.ancestors.includes(ancestorPath);
+                });
+
+                // Check if hub is ancestor of other or vice versa
+                const hubIsAncestor = other.ancestors.includes(hub.portPath);
+                const otherIsAncestor = hub.ancestors.includes(other.portPath);
+
+                if (isDescendant || shareAncestor || hubIsAncestor || otherIsAncestor) {
+                    group.push(other);
+                    used.add(other.portPath);
+                }
+            }
+
+            if (group.length > 1) {
+                groups.push(group);
+            }
         }
 
         return groups;
     }
 
     /**
-     * Calculate bounding box for a group of nodes with padding
+     * Calculate bounding box for hub group - ONLY includes hub nodes
      */
-    calculateGroupBounds(group, padding = 25) {
+    calculateGroupBounds(group, padding = 20) {
         if (!group || group.length === 0) return null;
 
         let minX = Infinity, maxX = -Infinity;
         let minY = Infinity, maxY = -Infinity;
 
-        // Include all nodes in the group
-        for (const { node } of group) {
+        // Only include hub nodes in the bounding box
+        for (const hub of group) {
+            const node = hub.node;
             minX = Math.min(minX, node.x);
             maxX = Math.max(maxX, node.x);
             minY = Math.min(minY, node.y);
             maxY = Math.max(maxY, node.y);
         }
 
-        // Also include non-hub children of grouped hubs
-        for (const { node } of group) {
-            if (node.children) {
-                for (const child of node.children) {
-                    if (child.data.device_class !== 'hub' ||
-                        !group.some(g => g.node === child)) {
-                        minX = Math.min(minX, child.x);
-                        maxX = Math.max(maxX, child.x);
-                        // Extend Y to include device labels
-                        maxY = Math.max(maxY, child.y + 150);
-                    }
-                }
-            }
-        }
-
         return {
             x: minX - padding,
-            y: minY - padding,
-            width: (maxY - minY) + padding * 2 + 150, // Note: x/y are swapped in horizontal tree
-            height: (maxX - minX) + padding * 2,
+            y: minY - padding - 20, // Extra space for label
+            width: (maxY - minY) + padding * 2,
+            height: (maxX - minX) + padding * 2 + 20,
             vendorId: group[0].node.data.vendor_id,
             vendorName: group[0].node.data.vendor_name || group[0].node.data.vendor_id,
             hubCount: group.length
@@ -314,9 +350,9 @@ class USBTree {
         // Create hierarchy
         const root = d3.hierarchy(virtualRoot);
 
-        // Calculate tree layout with more vertical spacing for larger nodes
+        // Calculate tree layout with adjustable vertical spacing
         const nodeCount = root.descendants().length;
-        const dynamicHeight = Math.max(this.height, nodeCount * 42);
+        const dynamicHeight = Math.max(this.height, nodeCount * this.nodeSpacing);
 
         const treeLayout = d3.tree()
             .size([dynamicHeight, this.width - 180]);
