@@ -1,4 +1,4 @@
-# USB Debug Tool Dependencies
+# USB Explorer Dependencies
 # Web framework
 fastapi>=0.100.0
 uvicorn[standard]>=0.20.0
@@ -11,6 +11,9 @@ pyudev>=0.24.0
 
 # Configuration
 pyyaml>=6.0
+
+# Data validation
+pydantic>=2.0.0
 
 # Async file handling
 aiofiles>=23.0.0

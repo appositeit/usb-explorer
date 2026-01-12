@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>USB Debug Tool</title>
+    <title>USB Explorer</title>
+    <link rel="icon" type="image/png" href="/static/img/icon.png">
 
     <!-- D3.js for tree visualization -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -17,10 +18,18 @@
 <body class="dark-mode">
     <header>
         <h1>
-            <i data-lucide="usb"></i>
-            USB Debug Tool
+            <img src="/static/img/icon.png" alt="USB Explorer" class="header-icon">
+            USB Explorer
         </h1>
         <div class="header-controls">
+            <div class="search-container">
+                <i data-lucide="search" class="search-icon"></i>
+                <input type="text" id="device-search" placeholder="Search devices..." title="Search by name, vendor, product, path...">
+                <button id="search-clear" class="search-clear hidden" title="Clear search">
+                    <i data-lucide="x"></i>
+                </button>
+                <div id="search-results" class="search-results hidden"></div>
+            </div>
             <button id="refresh-btn" title="Refresh device tree">
                 <i data-lucide="refresh-cw"></i>
                 Refresh
@@ -114,6 +123,86 @@
             <div class="modal-buttons">
                 <button id="name-save-btn" class="primary">Save</button>
                 <button id="name-cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hub label edit modal -->
+    <div id="hub-label-modal" class="modal hidden">
+        <div class="modal-content modal-wide">
+            <h3>Hub Settings</h3>
+            <p id="hub-label-info"></p>
+
+            <!-- Group name section -->
+            <div class="modal-section" id="hub-label-section">
+                <label for="hub-label-input">Group Name:</label>
+                <input type="text" id="hub-label-input" placeholder="Enter name (e.g. DOCK, MONITOR)" maxlength="20">
+                <p class="hint">Name to identify this hub group in the tree</p>
+            </div>
+
+            <!-- Detect group devices section -->
+            <div class="modal-section" id="hub-learn-section">
+                <label>Detect Group Devices:</label>
+                <p class="hint">Physically disconnect/reconnect to detect which hubs are in the same device</p>
+
+                <!-- Important guidance -->
+                <div id="hub-learn-guidance" class="guidance-box">
+                    <p><strong>⚠️ Important:</strong> If this hub has other hubs connected <em>downstream</em> (plugged into it), identify those <strong>first</strong> before this one. Otherwise downstream hubs will be incorrectly included in this group.</p>
+                </div>
+
+                <!-- Start detection button -->
+                <div id="hub-learn-status">
+                    <button id="hub-learn-btn" class="secondary">
+                        <i data-lucide="unplug"></i> Start Detection
+                    </button>
+                </div>
+
+                <!-- Detection in progress -->
+                <div id="hub-learn-progress" class="hidden">
+                    <div class="detection-instructions">
+                        <p><strong>Detection in progress...</strong></p>
+                        <ol>
+                            <li>Physically <strong>unplug</strong> this USB hub/dock</li>
+                            <li>Wait 1-2 seconds</li>
+                            <li>Plug it back in</li>
+                            <li>Click "Stop Detection" below</li>
+                        </ol>
+                    </div>
+                    <button id="hub-learn-stop-btn" class="primary">
+                        <i data-lucide="check"></i> Stop Detection
+                    </button>
+                    <button id="hub-learn-cancel-btn" class="secondary">
+                        Cancel
+                    </button>
+                </div>
+
+                <!-- Detection results -->
+                <div id="hub-learn-result" class="hidden">
+                    <div id="hub-learn-devices"></div>
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button id="hub-label-save-btn" class="primary">Save Group Name</button>
+                <button id="hub-label-cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Learned group edit modal -->
+    <div id="learned-group-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Edit Physical Group</h3>
+            <p id="learned-group-info"></p>
+            <div id="learned-group-members"></div>
+            <div class="form-group">
+                <label for="learned-group-name">Group Name:</label>
+                <input type="text" id="learned-group-name" placeholder="e.g., USB Dock, Monitor Hub">
+            </div>
+            <div class="modal-buttons">
+                <button id="learned-group-save-btn" class="primary">Save</button>
+                <button id="learned-group-delete-btn" class="danger">Delete Group</button>
+                <button id="learned-group-cancel-btn">Cancel</button>
             </div>
         </div>
     </div>

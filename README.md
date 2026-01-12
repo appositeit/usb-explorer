@@ -1,84 +1,137 @@
-# USB Debug Tool
+<p align="center">
+  <img src="doc/USB Explorer.png" alt="USB Explorer" width="128">
+</p>
 
-Real-time USB device monitoring and debugging for Linux.
+# USB Explorer
+
+**Visual USB topology and debugging for Linux**
+
+<p align="center">
+  <img src="doc/USB Explorer Screenshot.png" alt="USB Explorer Screenshot" width="800">
+</p>
+
+## Features
+
+- **Live Device Tree**: Visual representation of USB topology with hub grouping
+- **Real-time Updates**: Instant notification of device changes via WebSocket
+- **Error Detection**: Automatic parsing of dmesg for USB errors
+- **Audio Alerts**: Sound notifications for plug/unplug events
+- **Device Reset**: Reset problematic devices from the UI
+- **Custom Names**: Label your devices and hub groups for easy identification
+- **Search**: Find devices by name, vendor, product ID, or path
+- **Device Nodes**: Shows /dev paths like /dev/ttyACM0, /dev/sda
+
+## Limitations
+
+It's hard to know what physcially makes up a USB hub! The process is heuristic
+and doesn't always get it right. As such there's a function to discover what
+the hubs are by switching them on and off and noticing what turns on/off at the
+same time. This could affect storage devices or other device with state, so we
+caution the user, but caveat emptor!
+
+## Requirements
+
+- Python 3.9+
+- Linux with udev
+- Root/sudo access (optional, for device reset feature)
+
+## Installation
+
+### Using pipx (recommended)
+
+```bash
+# Install system dependency first
+# Debian/Ubuntu:
+sudo apt install libudev-dev
+# Fedora/RHEL:
+sudo dnf install systemd-devel
+
+# Install USB Explorer
+pipx install usb-explorer
+```
+
+### Using pip
+
+```bash
+# Install system dependency (see above)
+
+pip install usb-explorer
+```
+
+### From source
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/usb-explorer.git
+cd usb-explorer
+
+# Install system dependency (see above)
+
+# Option 1: Install with pip
+pip install -e .
+
+# Option 2: Use the install script (creates virtual environment)
+./install.sh
+```
 
 ## Quick Start
 
 ```bash
-# Start the tool (requires sudo for full functionality)
-sudo ./bin/start_usb_debug
+# Start USB Explorer (browser opens automatically)
+usb-explorer
+
+# Or with root privileges (enables device reset feature)
+sudo usb-explorer
 
 # The browser will open automatically to http://localhost:8080
 ```
 
-## Features
-
-- **Live Device Tree**: Visual representation of USB topology
-- **Real-time Updates**: Instant notification of device changes
-- **Error Detection**: Automatic parsing of dmesg for USB errors
-- **Audio Alerts**: Sound notifications for plug/unplug events
-- **Device Reset**: Reset problematic devices from the UI
-- **Custom Names**: Label your devices for easy identification
-
-## Requirements
-
-- Python 3.10+
-- Linux with udev
-- Root/sudo access (for device reset and full USB info)
-
-## Installation
-
-```bash
-# Clone and enter directory
-cd /path/to/fix_usb_hubs
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Make scripts executable
-chmod +x bin/*
-```
-
 ## Usage
 
-### Start Server
 ```bash
 # With browser auto-open (default)
-sudo ./bin/start_usb_debug
+usb-explorer
 
 # Without browser
-USB_DEBUG_OPEN_BROWSER=0 sudo ./bin/start_usb_debug
+USB_EXPLORER_OPEN_BROWSER=0 usb-explorer
 
 # Custom port
-USB_DEBUG_PORT=9000 sudo ./bin/start_usb_debug
-```
+USB_EXPLORER_PORT=9000 usb-explorer
 
-### Stop Server
-```bash
-./bin/stop_usb_debug
-```
-
-### Check Status
-```bash
-./bin/isalive_usb_debug
+# Run as Python module
+python -m usb_explorer
 ```
 
 ## Configuration
 
-Edit `config/devices.yaml` to add custom device names:
+Copy and edit `config/devices.yaml` (created automatically on first run):
 
 ```yaml
+# Server settings
+port: 8080
+host: 0.0.0.0
+auto_open_browser: true
+
+# Custom device names
 devices:
   - vendor_id: "05e3"
     product_id: "0610"
     custom_name: "Main USB Hub"
     notes: "Connected to monitor"
+
+# Hub group labels (displayed on hub boxes in the tree)
+hub_labels:
+  motherboard: MOBO
+  05e3:0610@5-1: DESK
 ```
 
-## Keyboard Shortcuts
+## Environment Variables
 
-- **Click device**: View device details
-- **Refresh button**: Reload device tree
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `USB_EXPLORER_PORT` | 8080 | Server port |
+| `USB_EXPLORER_HOST` | 0.0.0.0 | Server bind address |
+| `USB_EXPLORER_OPEN_BROWSER` | 1 | Auto-open browser (0 to disable) |
 
 ## API Endpoints
 
@@ -89,18 +142,43 @@ devices:
 | `/api/devices` | GET | Device tree JSON |
 | `/api/device/{path}` | GET | Single device info |
 | `/api/device/{path}/reset` | POST | Reset device |
+| `/api/device/name` | POST | Set custom device name |
+| `/api/hub-labels` | GET/POST | Get/set hub group labels |
 | `/api/errors` | GET | Recent USB errors |
 | `/api/health` | GET | Health check |
+| `/api/shutdown` | POST | Graceful shutdown |
 
 ## Troubleshooting
 
 ### "Permission denied" errors
-Run with sudo: `sudo ./bin/start_usb_debug`
+Some features require root access:
+```bash
+sudo usb-explorer
+```
 
 ### No devices showing
-- Ensure pyudev is installed: `pip install pyudev`
+- Ensure libudev is installed: `sudo apt install libudev-dev`
 - Check udev is running: `systemctl status udev`
 
 ### WebSocket disconnects
-- Check firewall allows port 8080
+- Check firewall allows the configured port
 - Try a different browser
+
+### lsusb shows "unable to initialize usb spec"
+This is an AppArmor issue. Create `/etc/apparmor.d/local/lsusb`:
+```
+/etc/udev/hwdb.bin r,
+/usr/share/hwdata/usb.ids r,
+/var/lib/usbutils/usb.ids r,
+```
+Then reload: `sudo apparmor_parser -r /etc/apparmor.d/lsusb`
+
+## Uninstall
+
+```bash
+./uninstall.sh
+```
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.

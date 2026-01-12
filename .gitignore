@@ -21,10 +21,10 @@ wheels/
 *.egg
 
 # Virtual environments
+.venv/
 venv/
 ENV/
 env/
-.venv/
 
 # IDE
 .idea/
@@ -38,6 +38,23 @@ artifacts/
 logs/
 *.log
 
+# User configuration (contains personal device names)
+config/devices.yaml
+
+# Generated launcher scripts
+usb-debug
+usb-explorer
+
 # OS
 .DS_Store
 Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# mypy
+.mypy_cache/

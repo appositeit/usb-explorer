@@ -1,0 +1,24 @@
+# USB Explorer Configuration
+# Copy this file to devices.yaml to customize
+
+# Server settings
+port: 8080
+host: 0.0.0.0
+auto_open_browser: true
+
+# Custom device names
+# Map vendor:product IDs to friendly names
+devices:
+  # Example: Give your USB hub a friendly name
+  # - vendor_id: '05e3'
+  #   product_id: '0610'
+  #   custom_name: My USB Hub
+  #   notes: The hub on my desk
+
+# Custom hub labels (displayed on hub group boxes in the tree)
+# Use port-path-specific keys for identical devices in different locations
+hub_labels:
+  # Example: Label the motherboard hub group
+  # motherboard: MOBO
+  # Example: Label a specific hub by its port path
+  # 05e3:0610@5-1: DESK

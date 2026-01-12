@@ -1,16 +1,10 @@
 #!/bin/bash
-# Start USB Debug Tool server
+# Start USB Explorer server
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-PID_FILE="/tmp/usb_debug_tool.pid"
-
-# Default settings
-HOST="${USB_DEBUG_HOST:-0.0.0.0}"
-PORT="${USB_DEBUG_PORT:-8080}"
-OPEN_BROWSER="${USB_DEBUG_OPEN_BROWSER:-1}"
+# Load common configuration
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 cd "$PROJECT_DIR"
 
@@ -18,7 +12,7 @@ cd "$PROJECT_DIR"
 if [ -f "$PID_FILE" ]; then
     OLD_PID=$(cat "$PID_FILE")
     if kill -0 "$OLD_PID" 2>/dev/null; then
-        echo "USB Debug Tool is already running (PID: $OLD_PID)"
+        echo "USB Explorer is already running (PID: $OLD_PID)"
         echo "Use stop_usb_debug to stop it first"
         exit 1
     else
@@ -38,17 +32,17 @@ fi
 export PYTHONPATH="$PROJECT_DIR/src:$PYTHONPATH"
 
 # Set environment variables
-export USB_DEBUG_HOST="$HOST"
-export USB_DEBUG_PORT="$PORT"
+export USB_DEBUG_HOST
+export USB_DEBUG_PORT
 
-if [ "$OPEN_BROWSER" = "0" ] || [ "$OPEN_BROWSER" = "false" ]; then
+if [ "$USB_DEBUG_OPEN_BROWSER" = "0" ] || [ "$USB_DEBUG_OPEN_BROWSER" = "false" ]; then
     export USB_DEBUG_NO_BROWSER=1
 fi
 
-echo "Starting USB Debug Tool on http://$HOST:$PORT"
+echo "Starting USB Explorer on http://$USB_DEBUG_HOST:$USB_DEBUG_PORT"
 
 # Start server
-python3 -m usb_debug_tool.main &
+python3 -m usb_explorer.main &
 SERVER_PID=$!
 
 echo $SERVER_PID > "$PID_FILE"
@@ -62,4 +56,4 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
     exit 1
 fi
 
-echo "USB Debug Tool is running at http://localhost:$PORT"
+echo "USB Explorer is running at http://localhost:$USB_DEBUG_PORT"

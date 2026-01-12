@@ -1,5 +1,5 @@
 /**
- * USB Debug Tool - Main application.
+ * USB Explorer - Main application.
  */
 
 class App {
@@ -65,13 +65,16 @@ class App {
         // Log filters
         this.setupLogFilters();
 
+        // Search
+        this.setupSearch();
+
         // Initialize Lucide icons
         lucide.createIcons();
 
         // Update sound button state
         this.updateSoundButtonState();
 
-        console.log('USB Debug Tool initialized');
+        console.log('USB Explorer initialized');
     }
 
     setupSoundModal() {
@@ -464,6 +467,235 @@ class App {
             icon.setAttribute('data-lucide', this.darkMode ? 'moon' : 'sun');
             lucide.createIcons();
         }
+    }
+
+    setupSearch() {
+        this.searchInput = document.getElementById('device-search');
+        this.searchResults = document.getElementById('search-results');
+        this.searchClear = document.getElementById('search-clear');
+        this.selectedResultIndex = -1;
+
+        if (!this.searchInput) return;
+
+        // Input handler with debounce
+        let debounceTimer;
+        this.searchInput.addEventListener('input', (e) => {
+            clearTimeout(debounceTimer);
+
+            const value = e.target.value;
+
+            // Show/hide clear button
+            this.searchClear.classList.toggle('hidden', !value);
+
+            // Close immediately if empty, otherwise debounce the search
+            if (!value.trim()) {
+                this.closeSearch();
+            } else {
+                debounceTimer = setTimeout(() => this.performSearch(value), 150);
+            }
+        });
+
+        // Keyboard navigation
+        this.searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                this.navigateResults(1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                this.navigateResults(-1);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                this.selectCurrentResult();
+            } else if (e.key === 'Escape') {
+                this.closeSearch();
+            }
+        });
+
+        // Clear button
+        this.searchClear.addEventListener('click', () => {
+            this.searchInput.value = '';
+            this.searchClear.classList.add('hidden');
+            this.closeSearch();
+            this.searchInput.focus();
+        });
+
+        // Close on click outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-container')) {
+                this.closeSearch();
+            }
+        });
+
+        // Focus handler - show results if there's text (with small delay to avoid race conditions)
+        this.searchInput.addEventListener('focus', () => {
+            setTimeout(() => {
+                const value = this.searchInput.value.trim();
+                if (value) {
+                    this.performSearch(value);
+                }
+            }, 50);
+        });
+    }
+
+    performSearch(query) {
+        query = query.trim().toLowerCase();
+
+        if (!query) {
+            this.closeSearch();
+            return;
+        }
+
+        // Get all devices from tree
+        const devices = this.getAllDevicesFlat();
+
+        // Search across multiple fields
+        const results = devices.filter(device => {
+            const searchFields = [
+                device.display_name,
+                device.vendor_id,
+                device.product_id,
+                device.port_path,
+                device.vendor_name,
+                device.product_name,
+                device.manufacturer,
+                device.product,
+                device.serial,
+                device.custom_name,
+                `${device.vendor_id}:${device.product_id}` // Combined VID:PID
+            ].filter(Boolean).map(f => f.toLowerCase());
+
+            return searchFields.some(field => field.includes(query));
+        });
+
+        this.showSearchResults(results, query);
+    }
+
+    getAllDevicesFlat() {
+        const devices = [];
+        const traverse = (deviceList) => {
+            for (const device of deviceList) {
+                devices.push(device);
+                if (device.children && device.children.length > 0) {
+                    traverse(device.children);
+                }
+            }
+        };
+        if (window.usbTree && window.usbTree.devices) {
+            traverse(window.usbTree.devices);
+        }
+        return devices;
+    }
+
+    showSearchResults(results, query) {
+        this.searchResults.innerHTML = '';
+        this.selectedResultIndex = -1;
+
+        if (results.length === 0) {
+            this.searchResults.innerHTML = '<div class="search-no-results">No devices found</div>';
+            this.searchResults.classList.remove('hidden');
+            return;
+        }
+
+        results.slice(0, 10).forEach((device, index) => {
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.dataset.index = index;
+            item.dataset.portPath = device.port_path;
+
+            // Highlight matching text in display name
+            const highlightedName = this.highlightMatch(device.display_name || 'Unknown', query);
+
+            // Build details string
+            const details = [
+                `${device.vendor_id}:${device.product_id}`,
+                device.port_path
+            ];
+            if (device.vendor_name && device.vendor_name !== device.display_name) {
+                details.push(device.vendor_name);
+            }
+
+            item.innerHTML = `
+                <span class="result-name">${highlightedName}</span>
+                <span class="result-details">${this.escapeHtml(details.join(' • '))}</span>
+            `;
+
+            item.addEventListener('click', () => this.selectSearchResult(device));
+            item.addEventListener('mouseenter', () => {
+                this.selectedResultIndex = index;
+                this.updateResultSelection();
+            });
+
+            this.searchResults.appendChild(item);
+        });
+
+        if (results.length > 10) {
+            const more = document.createElement('div');
+            more.className = 'search-no-results';
+            more.textContent = `+ ${results.length - 10} more results`;
+            this.searchResults.appendChild(more);
+        }
+
+        this.searchResults.classList.remove('hidden');
+    }
+
+    highlightMatch(text, query) {
+        if (!query) return this.escapeHtml(text);
+
+        const escaped = this.escapeHtml(text);
+        const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return escaped.replace(regex, '<strong>$1</strong>');
+    }
+
+    navigateResults(direction) {
+        const items = this.searchResults.querySelectorAll('.search-result-item');
+        if (items.length === 0) return;
+
+        this.selectedResultIndex += direction;
+
+        if (this.selectedResultIndex < 0) {
+            this.selectedResultIndex = items.length - 1;
+        } else if (this.selectedResultIndex >= items.length) {
+            this.selectedResultIndex = 0;
+        }
+
+        this.updateResultSelection();
+    }
+
+    updateResultSelection() {
+        const items = this.searchResults.querySelectorAll('.search-result-item');
+        items.forEach((item, index) => {
+            item.classList.toggle('selected', index === this.selectedResultIndex);
+        });
+    }
+
+    selectCurrentResult() {
+        const items = this.searchResults.querySelectorAll('.search-result-item');
+        if (this.selectedResultIndex >= 0 && this.selectedResultIndex < items.length) {
+            const portPath = items[this.selectedResultIndex].dataset.portPath;
+            const device = window.usbTree.findDevice(portPath);
+            if (device) {
+                this.selectSearchResult(device);
+            }
+        }
+    }
+
+    selectSearchResult(device) {
+        // Select device in tree and show in info panel
+        window.usbTree.selectDevice(device.port_path);
+        window.infoPanel.showDevice(device);
+
+        // Clear search input first
+        this.searchInput.value = '';
+        this.searchClear.classList.add('hidden');
+
+        // Close search
+        this.closeSearch();
+    }
+
+    closeSearch() {
+        this.searchResults.classList.add('hidden');
+        this.searchResults.innerHTML = '';
+        this.selectedResultIndex = -1;
     }
 
     escapeHtml(text) {

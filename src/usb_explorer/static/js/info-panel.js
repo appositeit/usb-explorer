@@ -76,6 +76,16 @@ class InfoPanel {
             `;
         }
 
+        let devNodesHtml = '';
+        if (device.dev_nodes && device.dev_nodes.length > 0) {
+            devNodesHtml = `
+                <div class="info-item" style="grid-column: span 2;">
+                    <span class="label">Device Nodes</span>
+                    <span class="value" style="font-family: monospace;">${device.dev_nodes.join(', ')}</span>
+                </div>
+            `;
+        }
+
         this.container.innerHTML = `
             <div class="device-info">
                 <div class="device-header">
@@ -115,6 +125,11 @@ class InfoPanel {
                             <span class="label">Device #</span>
                             <span class="value">${device.device} (bus ${device.bus})</span>
                         </div>
+                        <div class="info-item" style="grid-column: span 2;">
+                            <span class="label">Device Path</span>
+                            <span class="value" style="font-family: monospace;">/dev/bus/usb/${String(device.bus).padStart(3, '0')}/${String(device.device).padStart(3, '0')}</span>
+                        </div>
+                        ${devNodesHtml}
                     </div>
                 </div>
 
@@ -132,6 +147,12 @@ class InfoPanel {
                     <h4>Connection</h4>
                     <div class="info-grid">
                         <div class="info-item">
+                            <span class="label">Status</span>
+                            <span class="value" style="color: ${hasErrors ? 'var(--error-color)' : 'var(--success-color)'}">
+                                ${hasErrors ? '⚠ Has Errors' : '✓ Connected'}
+                            </span>
+                        </div>
+                        <div class="info-item">
                             <span class="label">Speed</span>
                             <span class="value">${this.formatSpeed(device.speed)}</span>
                         </div>
@@ -139,12 +160,12 @@ class InfoPanel {
                             <span class="label">Power</span>
                             <span class="value">${device.power_draw_ma}mA</span>
                         </div>
-                        ${portsInfo}
-                        ${childrenInfo}
                         <div class="info-item">
                             <span class="label">Driver</span>
                             <span class="value">${device.driver || 'None'}</span>
                         </div>
+                        ${portsInfo}
+                        ${childrenInfo}
                     </div>
                 </div>
 
@@ -161,6 +182,10 @@ class InfoPanel {
                             <i data-lucide="refresh-cw"></i>
                             Reset
                         </button>
+                        <button id="clear-errors-btn" title="Clear error history" ${!hasErrors ? 'disabled' : ''}>
+                            <i data-lucide="trash-2"></i>
+                            Clear Errors
+                        </button>
                     </div>
                 </div>
             </div>
@@ -176,6 +201,7 @@ class InfoPanel {
     attachEventHandlers(device) {
         const renameBtn = document.getElementById('rename-btn');
         const resetBtn = document.getElementById('reset-btn');
+        const clearErrorsBtn = document.getElementById('clear-errors-btn');
 
         if (renameBtn) {
             renameBtn.addEventListener('click', () => this.showRenameModal(device));
@@ -184,6 +210,30 @@ class InfoPanel {
         if (resetBtn && !device.is_root_hub) {
             resetBtn.addEventListener('click', () => this.resetDevice(device));
         }
+
+        if (clearErrorsBtn && device.errors && device.errors.length > 0) {
+            clearErrorsBtn.addEventListener('click', () => this.clearDeviceErrors(device));
+        }
+    }
+
+    clearDeviceErrors(device) {
+        // Clear errors on the device
+        device.errors = [];
+        device.has_errors = false;
+
+        // Update the tree to remove error indicator
+        if (window.usbTree) {
+            const treeDevice = window.usbTree.findDevice(device.port_path);
+            if (treeDevice) {
+                treeDevice.errors = [];
+                treeDevice.has_errors = false;
+                window.usbTree.render();
+            }
+        }
+
+        // Refresh the info panel
+        this.showDevice(device);
+        this.addLog('info', `Cleared errors for ${device.display_name}`);
     }
 
     showRenameModal(device) {

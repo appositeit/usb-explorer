@@ -73,6 +73,7 @@ class USBDevice(BaseModel):
     # State
     is_root_hub: bool = Field(default=False, description="True if this is a root hub")
     driver: Optional[str] = Field(default=None, description="Kernel driver name")
+    dev_nodes: list[str] = Field(default_factory=list, description="Device nodes like /dev/ttyACM0")
 
     @property
     def display_name(self) -> str:
@@ -140,6 +141,11 @@ class EventType(str, Enum):
     DEVICE_REMOVED = "device_removed"
     DEVICE_ERROR = "device_error"
     DEVICE_UPDATED = "device_updated"
+    # Learning mode events
+    LEARNING_STARTED = "learning_started"
+    LEARNING_DETECTED = "learning_detected"
+    LEARNING_SAVED = "learning_saved"
+    LEARNING_CANCELLED = "learning_cancelled"
 
 
 class USBEvent(BaseModel):
@@ -151,6 +157,8 @@ class USBEvent(BaseModel):
     port_path: Optional[str] = None  # For removals (device no longer exists)
     error_message: Optional[str] = None
     timestamp: float = Field(default=0.0)
+    # Learning mode data
+    learning_data: Optional[dict] = Field(default=None, description="Data for learning mode events")
 
     def to_websocket_message(self) -> dict:
         """Convert to WebSocket message format."""
@@ -173,6 +181,9 @@ class USBEvent(BaseModel):
         if self.error_message:
             msg["error"] = self.error_message
 
+        if self.learning_data:
+            msg["learning_data"] = self.learning_data
+
         return msg
 
 
@@ -185,6 +196,14 @@ class DeviceConfig(BaseModel):
     notes: Optional[str] = None
 
 
+class PhysicalGroup(BaseModel):
+    """A group of devices that are part of the same physical device."""
+
+    name: str = Field(description="User-defined name for this physical device")
+    label: Optional[str] = Field(default=None, description="Short label for display (e.g., 'DOCK')")
+    members: list[str] = Field(description="Port paths of devices in this group")
+
+
 class AppConfig(BaseModel):
     """Application configuration."""
 
@@ -192,3 +211,5 @@ class AppConfig(BaseModel):
     host: str = Field(default="0.0.0.0")
     auto_open_browser: bool = Field(default=True)
     devices: list[DeviceConfig] = Field(default_factory=list)
+    hub_labels: dict[str, str] = Field(default_factory=dict, description="Custom labels for hub groups")
+    physical_groups: list[PhysicalGroup] = Field(default_factory=list, description="Learned physical device groups")

@@ -1,5 +1,5 @@
 """
-Configuration management for USB Debug Tool.
+Configuration management for USB Explorer.
 
 Handles loading and saving of user configuration including custom device names.
 """
@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 import yaml
 
-from .models import AppConfig, DeviceConfig
+from .models import AppConfig, DeviceConfig, PhysicalGroup
 
 logger = logging.getLogger(__name__)
 
@@ -46,11 +46,21 @@ class ConfigManager:
                 for dev_data in data.get("devices", []):
                     devices.append(DeviceConfig(**dev_data))
 
+                # Parse hub labels
+                hub_labels = data.get("hub_labels", {}) or {}
+
+                # Parse physical groups
+                physical_groups = []
+                for group_data in data.get("physical_groups", []):
+                    physical_groups.append(PhysicalGroup(**group_data))
+
                 self._config = AppConfig(
                     port=data.get("port", 8080),
                     host=data.get("host", "0.0.0.0"),
                     auto_open_browser=data.get("auto_open_browser", True),
                     devices=devices,
+                    hub_labels=hub_labels,
+                    physical_groups=physical_groups,
                 )
 
                 # Build lookup table
@@ -92,6 +102,15 @@ class ConfigManager:
                 }
                 for d in self._config.devices
             ],
+            "hub_labels": self._config.hub_labels,
+            "physical_groups": [
+                {
+                    "name": g.name,
+                    "label": g.label,
+                    "members": g.members,
+                }
+                for g in self._config.physical_groups
+            ],
         }
 
         try:
@@ -111,6 +130,24 @@ class ConfigManager:
         if self._config is None:
             self.load()
         return self._device_lookup.copy()
+
+    def get_hub_labels(self) -> dict[str, str]:
+        """Get the hub labels configuration."""
+        if self._config is None:
+            self.load()
+        return self._config.hub_labels.copy()  # type: ignore
+
+    def set_hub_label(self, key: str, label: Optional[str]) -> None:
+        """Set or remove a hub label."""
+        if self._config is None:
+            self.load()
+
+        if label:
+            self._config.hub_labels[key] = label  # type: ignore
+        else:
+            self._config.hub_labels.pop(key, None)  # type: ignore
+
+        self.save()
 
     def set_device_name(self, vendor_id: str, product_id: str, name: str) -> None:
         """Set custom name for a device."""
@@ -145,6 +182,67 @@ class ConfigManager:
             if not (d.vendor_id == vendor_id and d.product_id == product_id)
         ]
         self.save()
+
+    def get_physical_groups(self) -> list[PhysicalGroup]:
+        """Get all physical device groups."""
+        if self._config is None:
+            self.load()
+        return self._config.physical_groups.copy()  # type: ignore
+
+    def add_physical_group(self, name: str, members: list[str], label: Optional[str] = None) -> PhysicalGroup:
+        """Add a new physical device group."""
+        if self._config is None:
+            self.load()
+
+        # Check for existing group with overlapping members
+        for group in self._config.physical_groups:  # type: ignore
+            overlap = set(group.members) & set(members)
+            if overlap:
+                # Remove overlapping members from existing group
+                group.members = [m for m in group.members if m not in overlap]
+                # If group is now empty, remove it
+                if not group.members:
+                    self._config.physical_groups.remove(group)  # type: ignore
+
+        new_group = PhysicalGroup(name=name, members=members, label=label)
+        self._config.physical_groups.append(new_group)  # type: ignore
+        self.save()
+        return new_group
+
+    def update_physical_group(self, old_name: str, name: str, label: Optional[str] = None) -> Optional[PhysicalGroup]:
+        """Update an existing physical group's name or label."""
+        if self._config is None:
+            self.load()
+
+        for group in self._config.physical_groups:  # type: ignore
+            if group.name == old_name:
+                group.name = name
+                group.label = label
+                self.save()
+                return group
+        return None
+
+    def remove_physical_group(self, name: str) -> bool:
+        """Remove a physical group by name."""
+        if self._config is None:
+            self.load()
+
+        for group in self._config.physical_groups:  # type: ignore
+            if group.name == name:
+                self._config.physical_groups.remove(group)  # type: ignore
+                self.save()
+                return True
+        return False
+
+    def find_physical_group_for_device(self, port_path: str) -> Optional[PhysicalGroup]:
+        """Find the physical group that contains a device."""
+        if self._config is None:
+            self.load()
+
+        for group in self._config.physical_groups:  # type: ignore
+            if port_path in group.members:
+                return group
+        return None
 
 
 # Global config manager instance

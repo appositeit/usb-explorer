@@ -1,17 +1,13 @@
 #!/bin/bash
-# Stop USB Debug Tool server
+# Stop USB Explorer server
 
-PID_FILE="/tmp/usb_debug_tool.pid"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+# Load common configuration
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-# Try graceful shutdown via API first
-PORT="${USB_DEBUG_PORT:-8080}"
-
-echo "Stopping USB Debug Tool..."
+echo "Stopping USB Explorer..."
 
 # Try API shutdown
-if curl -s -X POST "http://localhost:$PORT/api/shutdown" > /dev/null 2>&1; then
+if curl -s -X POST "http://localhost:$USB_DEBUG_PORT/api/shutdown" > /dev/null 2>&1; then
     echo "Shutdown request sent"
     sleep 2
 fi
@@ -40,8 +36,8 @@ if [ -f "$PID_FILE" ]; then
     fi
 
     rm -f "$PID_FILE"
-    echo "USB Debug Tool stopped"
+    echo "USB Explorer stopped"
 else
     # Try to find and kill by process name
-    pkill -f "usb_debug_tool.main" 2>/dev/null && echo "Killed process" || echo "No running instance found"
+    pkill -f "usb_explorer.main" 2>/dev/null && echo "Killed process" || echo "No running instance found"
 fi

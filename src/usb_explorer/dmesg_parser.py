@@ -31,7 +31,7 @@ USB_ERROR_PATTERNS = [
     # Device errors
     (r"usb (\d+-[\d.]+): device descriptor read.*, error (-?\d+)", "Device descriptor read failed"),
     (r"usb (\d+-[\d.]+): device not accepting address .*, error (-?\d+)", "Device not accepting address"),
-    (r"usb (\d+-[\d.]+): USB disconnect, device number (\d+)", "Device disconnected"),
+    # Note: "USB disconnect" is not an error, it's informational - don't include
     (r"usb (\d+-[\d.]+): can't .*, error (-?\d+)", "Device error"),
 
     # Hub errors
