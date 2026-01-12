@@ -51,9 +51,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/usb-explorer"
-Repository = "https://github.com/yourusername/usb-explorer"
-Issues = "https://github.com/yourusername/usb-explorer/issues"
+Homepage = "https://github.com/appositeit/usb-explorer"
+Repository = "https://github.com/appositeit/usb-explorer"
+Issues = "https://github.com/appositeit/usb-explorer/issues"
 
 [project.scripts]
 usb-explorer = "usb_explorer.__main__:main"

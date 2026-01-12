@@ -62,7 +62,7 @@ pip install usb-explorer
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/usb-explorer.git
+git clone https://github.com/appositeit/usb-explorer.git
 cd usb-explorer
 
 # Install system dependency (see above)
