@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="doc/USB Explorer.png" alt="USB Explorer" width="128">
+  <img src="https://raw.githubusercontent.com/appositeit/usb-explorer/master/doc/USB%20Explorer.png" alt="USB Explorer" width="128">
 </p>
 
 # USB Explorer
@@ -7,7 +7,7 @@
 **Visual USB topology and debugging for Linux**
 
 <p align="center">
-  <img src="doc/USB Explorer Screenshot.png" alt="USB Explorer Screenshot" width="800">
+  <img src="https://raw.githubusercontent.com/appositeit/usb-explorer/master/doc/USB%20Explorer%20Screenshot.png" alt="USB Explorer Screenshot" width="800">
 </p>
 
 ## Features
